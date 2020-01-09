@@ -13,8 +13,12 @@ The package resource API is designed to work with normal filesystem packages,
 method.
 """
 
+import six
 import sys, os, zipimport, time, re, imp, types
-from urlparse import urlparse, urlunparse
+if six.PY2:
+    from urlparse import urlparse, urlunparse
+else:
+    from urllib.parse import urlparse, urlunparse
 
 try:
     frozenset
@@ -48,7 +52,7 @@ else:
 # attribute is present to decide wether to reinstall the package
 _distribute = True
 
-def _bypass_ensure_directory(name, mode=0777):
+def _bypass_ensure_directory(name, mode=0o777):
     # Sandbox-bypassing version of ensure_directory()
     if not WRITE_SUPPORT:
         raise IOError('"os.mkdir" not supported on this platform.')
@@ -62,7 +66,7 @@ _state_vars = {}
 
 def _declare_state(vartype, **kw):
     g = globals()
-    for name, val in kw.iteritems():
+    for name, val in kw.items():
         g[name] = val
         _state_vars[name] = vartype
 
@@ -660,7 +664,7 @@ class WorkingSet(object):
                 try:
                     resolvees = shadow_set.resolve(req, env, installer)
 
-                except ResolutionError,v:
+                except ResolutionError as v:
                     error_info[dist] = v    # save error info
                     if fallback:
                         continue    # try the next older version of project
@@ -718,7 +722,7 @@ class WorkingSet(object):
         return (self.entries[:], self.entry_keys.copy(), self.by_key.copy(),
                 self.callbacks[:])
 
-    def __setstate__(self, (entries, keys, by_key, callbacks)):
+    def __setstate__(self, entries, keys, by_key, callbacks):
         self.entries = entries[:]
         self.entry_keys = keys.copy()
         self.by_key = by_key.copy()
@@ -1031,7 +1035,7 @@ variable to point to an accessible directory.
 
         if os.name == 'posix':
             # Make the resource executable
-            mode = ((os.stat(tempname).st_mode) | 0555) & 07777
+            mode = ((os.stat(tempname).st_mode) | 0o555) & 0o7777
             os.chmod(tempname, mode)
 
 
@@ -1193,7 +1197,7 @@ class NullProvider:
         return self._fn(self.module_path, resource_name)
 
     def get_resource_stream(self, manager, resource_name):
-        return StringIO(self.get_resource_string(manager, resource_name))
+        return BytesIO(self.get_resource_string(manager, resource_name))
 
     def get_resource_string(self, manager, resource_name):
         return self._get(self._fn(self.module_path, resource_name))
@@ -1249,7 +1253,7 @@ class NullProvider:
                 len(script_text), 0, script_text.split('\n'), script_filename
             )
             script_code = compile(script_text,script_filename,'exec')
-            exec script_code in namespace, namespace
+            exec(script_code, namespace, namespace)
 
     def _has(self, path):
         raise NotImplementedError(
@@ -1332,7 +1336,10 @@ class DefaultProvider(EggProvider):
 register_loader_type(type(None), DefaultProvider)
 
 if importlib_bootstrap is not None:
-    register_loader_type(importlib_bootstrap.SourceFileLoader, DefaultProvider)
+    try: #handle broken pip
+        register_loader_type(importlib_bootstrap.SourceFileLoader, DefaultProvider)
+    except:
+        pass
 
 
 class EmptyProvider(NullProvider):
@@ -1734,14 +1741,11 @@ def find_in_zip(importer, path_item, only=False):
 
 register_finder(zipimport.zipimporter, find_in_zip)
 
-def StringIO(*args, **kw):
-    """Thunk to load the real StringIO on demand"""
-    global StringIO
-    try:
-        from cStringIO import StringIO
-    except ImportError:
-        from StringIO import StringIO
-    return StringIO(*args,**kw)
+def BytesIO(*args, **kw):
+    """Thunk to load the real BytesIO on demand"""
+    global BytesIO
+    from io import BytesIO
+    return BytesIO(*args,**kw)
 
 def find_nothing(importer, path_item, only=False):
     return ()
@@ -1790,7 +1794,10 @@ def find_on_path(importer, path_item, only=False):
 register_finder(ImpWrapper,find_on_path)
 
 if importlib_bootstrap is not None:
-    register_finder(importlib_bootstrap.FileFinder, find_on_path)
+    try: #handle broken pip
+        register_finder(importlib_bootstrap.FileFinder, find_on_path)
+    except:
+        pass
 
 _declare_state('dict', _namespace_handlers={})
 _declare_state('dict', _namespace_packages={})
@@ -1892,7 +1899,10 @@ register_namespace_handler(ImpWrapper,file_ns_handler)
 register_namespace_handler(zipimport.zipimporter,file_ns_handler)
 
 if importlib_bootstrap is not None:
-    register_namespace_handler(importlib_bootstrap.FileFinder, file_ns_handler)
+    try: #handle broken pip
+        register_namespace_handler(importlib_bootstrap.FileFinder, file_ns_handler)
+    except:
+        pass
 
 
 def null_ns_handler(importer, path_item, packageName, module):
@@ -2302,7 +2312,7 @@ class Distribution(object):
     def __getattr__(self,attr):
         """Delegate all unrecognized public attributes to .metadata provider"""
         if attr.startswith('_'):
-            raise AttributeError,attr
+            raise AttributeError(attr)
         return getattr(self._provider, attr)
 
     #@classmethod
@@ -2670,7 +2680,7 @@ class Requirement:
 
     def __contains__(self,item):
         if isinstance(item,Distribution):
-            if item.key <> self.key: return False
+            if item.key != self.key: return False
             if self.index: item = item.parsed_version  # only get if we need it
         elif isinstance(item,basestring):
             item = parse_version(item)

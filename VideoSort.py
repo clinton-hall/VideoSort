@@ -848,7 +848,7 @@ def add_series_mapping(guess, mapping):
             episode_num_just = episodes[0].rjust(2, '0') + episode_separator + episodes[-1].rjust(2, '0')
         else:   # if multiple_episodes == 'list':
             for episode_num in episodes:
-                ep_prefix = episode_separator if episode_num_all <> '' else ''
+                ep_prefix = episode_separator if episode_num_all != '' else ''
                 episode_num_all += ep_prefix + episode_num
                 episode_num_just += ep_prefix + episode_num.rjust(2,'0')
 
