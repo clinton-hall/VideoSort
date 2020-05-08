@@ -336,7 +336,7 @@ run_main = run_script   # backward compatibility
 
 def get_distribution(dist):
     """Return a current distribution object for a Requirement or string"""
-    if isinstance(dist,basestring): dist = Requirement.parse(dist)
+    if isinstance(dist,six.string_types): dist = Requirement.parse(dist)
     if isinstance(dist,Requirement): dist = get_provider(dist)
     if not isinstance(dist,Distribution):
         raise TypeError("Expected string, Requirement, or Distribution", dist)
@@ -1932,7 +1932,7 @@ def _set_parent_ns(packageName):
 
 def yield_lines(strs):
     """Yield non-empty/non-comment lines of a ``basestring`` or sequence"""
-    if isinstance(strs,basestring):
+    if isinstance(strs,six.string_types):
         for s in strs.splitlines():
             s = s.strip()
             if s and not s.startswith('#'):     # skip blank lines/comments
@@ -2682,7 +2682,7 @@ class Requirement:
         if isinstance(item,Distribution):
             if item.key != self.key: return False
             if self.index: item = item.parsed_version  # only get if we need it
-        elif isinstance(item,basestring):
+        elif isinstance(item,six.string_types):
             item = parse_version(item)
         last = None
         compare = lambda a, b: (a > b) - (a < b) # -1, 0, 1
