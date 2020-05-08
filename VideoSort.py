@@ -273,6 +273,8 @@ import shutil
 import guessit
 import difflib
 
+import six
+
 # Exit codes used by NZBGet
 POSTPROCESS_SUCCESS=93
 POSTPROCESS_NONE=95
@@ -649,7 +651,7 @@ def titler(p):
     """ title() replacement
         Python's title() fails with Latin-1, so use Unicode detour.
     """
-    if isinstance(p, unicode):
+    if isinstance(p, six.text_type):
         return p.title()
     elif gUTF:
         try:
@@ -1087,7 +1089,7 @@ def guess_info(filename):
     if verbose:
         print('Guessing: %s' % guessfilename)
 
-    guess = guessit.api.guessit(unicode(guessfilename), {'allowed_languages': [], 'allowed_countries': []})
+    guess = guessit.api.guessit(six.text_type(guessfilename), {'allowed_languages': [], 'allowed_countries': []})
 
     if verbose:
         print(guess)
@@ -1215,7 +1217,7 @@ def construct_path(filename):
     old_path = ''
     while old_path != path:
         old_path = path
-        for key, name in REPLACE_AFTER.iteritems():
+        for key, name in six.iteritems(REPLACE_AFTER):
             path = path.replace(key, name)
 
     path = path.replace('%up', '..')
